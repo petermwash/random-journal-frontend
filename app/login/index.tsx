@@ -1,5 +1,5 @@
-import { View, Text, TextInput, Button, TouchableOpacity } from 'react-native'
-import React from 'react'
+import { View, Text, TextInput, Button, TouchableOpacity, ActivityIndicator } from 'react-native'
+import React, { useEffect, useState } from 'react'
 import tw from 'twrnc';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router } from 'expo-router';
@@ -8,8 +8,12 @@ import { useForm } from 'react-hook-form';
 import CustomButton from '../../components/CustomButton';
 import { EMAIL_REGEX } from '../../constants';
 import { login } from '../../services/auth';
+import useLogedInUser from '../../hooks/useLogedInUser';
 
 const Login = () => {
+  const logedInUser = useLogedInUser();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const { 
     control, 
     handleSubmit, 
@@ -19,24 +23,32 @@ const Login = () => {
   const onSubmit = async (
     data: { email: string, password: string }
     ) => {
-    console.log("DATA => ", data)
-    try {
-        const user = await login(data.email, data.password)
-        router.replace("/journal")
+      setIsLoading(true);
+
+      try {
+          const user = await login(data.email, data.password)
+          logedInUser.onUpdateUser({email: user.email, id: user.uid})
+          router.replace("/journal")
+          setIsLoading(false);
+    
+        } catch (error) {
+          setIsLoading(false);
+          if (error.code === 'auth/user-not-fount' || 
+            error.code === 'auth/wrong-password' ||
+            error.code === 'auth/invalid-credential'
+            ) {
+            alert("You entered invalid email or password!")
+          }
+          if (error.code === 'auth/too-many-requests') {
+            alert("Too many ligin attempts! Please try again later")
+          }
+          alert("Login error: " + error.message)
+        }
+    }
   
-      } catch (error) {
-        if (error.code === 'auth/user-not-fount' || 
-          error.code === 'auth/wrong-password' ||
-          error.code === 'auth/invalid-credential'
-          ) {
-          alert("You entered invalid email or password!")
-        }
-        if (error.code === 'auth/too-many-requests') {
-          alert("Too many ligin attempts! Please try again later")
-        }
-        alert("Login error: " + error.message)
-      }
-  }
+    if (isLoading) {
+        return <ActivityIndicator size="large" />
+    }
 
   return (
     <SafeAreaView style={tw`flex-1 items-center justify-center px-8`}>
