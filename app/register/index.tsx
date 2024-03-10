@@ -1,5 +1,5 @@
-import { View, Text, TextInput, Button, TouchableOpacity } from 'react-native'
-import React from 'react'
+import { View, Text, TextInput, Button, TouchableOpacity, ActivityIndicator } from 'react-native'
+import React, { useState } from 'react'
 import tw from 'twrnc';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router } from 'expo-router';
@@ -8,8 +8,13 @@ import { useForm } from 'react-hook-form';
 import CustomButton from '../../components/CustomButton';
 import { EMAIL_REGEX } from '../../constants';
 import { register } from '../../services/auth';
+import useLogedInUser from '../../hooks/useLogedInUser';
+import { addUser } from '../../services/user';
 
-const Login = () => {
+const Register = () => {
+  const logedInUser = useLogedInUser();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const { 
     control, 
     handleSubmit, 
@@ -19,13 +24,20 @@ const Login = () => {
   const onSubmit = async (
     data: { email: string, password: string }
     ) => {
-    console.log("DATA => ", data)
+    setIsLoading(true);
 
     try {
       const user = await register(data.email, data.password)
-      router.replace("/journal")
+      logedInUser.onUpdateUser({email: user.email, id: user.uid})
+      addUser(user.email, user.uid)
+        .then(() => {
+          router.replace("/journal")
+          setIsLoading(false);
+        })
+        .catch((error) => console.log("ADDING_USER_ERROR => ", error))
 
     } catch (error) {
+      setIsLoading(false);
       if (error.code === 'auth/email-already-in-use') {
         alert("That email address is already in use!")
       }
@@ -35,6 +47,10 @@ const Login = () => {
       }
       alert("Register error: " + error.message)
     }
+  }
+
+  if (isLoading) {
+    return <ActivityIndicator size="large" />
   }
 
   return (
@@ -82,4 +98,4 @@ const Login = () => {
   )
 }
 
-export default Login;
+export default Register;

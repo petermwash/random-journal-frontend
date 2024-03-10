@@ -1,4 +1,5 @@
 import { 
+    ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -13,9 +14,13 @@ import React, { useRef, useState } from 'react'
 import tw from 'twrnc';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../../components/CustomButton';
+import useLogedInUser from '../../hooks/useLogedInUser';
+import { createJournal } from '../../services/journal';
 
 const Journal = () => {
   const richText = useRef<any>();
+  const logedInUser = useLogedInUser();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [descHTML, setDescHTML] = useState("");
   const [showDescError, setShowDescError] = useState(false);
@@ -37,10 +42,24 @@ const Journal = () => {
     if (replaceWhiteSpace.length <= 0) {
       setShowDescError(true);
     } else {
-      console.log("JOURNAL_DATA_HTML => ", descHTML)
-      console.log("JOURNAL_DATA_PLAIN => ", replaceHTML)
+      setIsLoading(true);
+
+      createJournal(logedInUser.user.email, descHTML)
+        .then((res) => {
+            setIsLoading(false);
+            alert("Journal posted Successfuly!")
+            console.log("JOURNAL_RES => ", res)
+        })
+        .catch((error) => {
+            setIsLoading(false);
+            console.log("ADDING_JOURNAL_ERROR => ", error)
+        })
     }
   };
+
+  if (isLoading) {
+    return <ActivityIndicator size="large" />
+  }
 
   return (
     <SafeAreaView style={tw`flex-1 items-center justify-center px-8`}>
@@ -58,7 +77,10 @@ const Journal = () => {
             placeholder="Click to start typing your thoughts here :)"
             // androidHardwareAccelerationDisabled={true}
             style={styles.richTextEditorStyle}
-            initialHeight={250}
+            initialHeight={280}
+            editorStyle={{
+              contentCSSText: 'font-size: 20px;',
+            }}
           />
           <RichToolbar
             editor={richText}
@@ -118,9 +140,7 @@ const styles = StyleSheet.create({
           width: 0,
           height: 2,
         },
-        shadowOpacity: 0.23,
-        shadowRadius: 2.62,
-        fontSize: 20,
+        fontSize: 58,
       },
     
       richTextToolbarStyle: {
